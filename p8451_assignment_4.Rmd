@@ -19,10 +19,11 @@ library(dplyr)
 library(stats)
 library(factoextra)
 library(cluster)
+library(ggpubr)
 ```
 
-## Part I
-### Step 1: Load and Prepare Dataset 
+## Part 0
+### Load and Prepare Dataset 
 
 The dataset is first imorted using the `read_csv` function, and is cleaned using the `clean_names` function. The dataset is then summarised using the `skim` function. 
 
@@ -102,11 +103,113 @@ nyc_doh_data =
 
 The dataset `nyc_doh_data` now has 2195 observations. The dataset has 17 variables, 12 of which are factor variables (`hypertension`, `diabetes`, `asthma`, `tobacco`, `alcohol`, `physical_activty_category`, `diet_category`, `age_category`, `sex`, `hispanic`, `country_of_origin`, `household_annual_income`) and 5 of which are numeric variables (`id`, `bmi`, `physical_activity_min`, `walk_avg_day`, `healthy_days`). 
 
+### Removing highly correlated features and centering and scaling
+
+Prior to analysis, we want to remove highly correlated features to avoid introducing error. To do this, the numeric variables in our original dataset `nyc_doh_data` need to be selected and the `cor` function is applied to calculate correlations. Factor variables are omitted, since their correlations cannot be calculated. A cutoff point of 0.4 is used to identify highly correlated features using the function `findCorrelation`. The output is stored in the object `high_correlations`. 
+
+```{r}
+nyc_doh_numeric_data = 
+  nyc_doh_data %>%
+  select(where(is.numeric))
+
+correlations = 
+  cor(nyc_doh_numeric_data,
+      use = "complete.obs")
+
+high_correlations = findCorrelation(correlations, cutoff = 0.4)
+```
+
+The output indicates that there are no values in the `high_correlations` object, indicating that there are no highly correlated features that need to be removed. We can then proceed with the centering and scaling
+
+```{r}
+set.up.preprocess = 
+  preProcess(nyc_doh_numeric_data, method = c("center", "scale"))
+
+transformed.vals = 
+  predict(set.up.preprocess, nyc_doh_numeric_data)
+```
+
+### Creating balanced partitions in the data 
+
+The data is then partitioned into training and testing using a 70/30 split by using the function `createDataPartition`. The training and testing dataset is  generated with an equal proportion of individual with the outcome of interest, in this case `healthy_days`. 
+
+```{r}
+train.index = 
+  createDataPartition(nyc_doh_data$healthy_days, p = 0.7, list = FALSE)
+
+nyc_doh_train = nyc_doh_data[train.index,]
+nyc_doh_test = nyc_doh_data[-train.index,]
+```
 
 
+## Part I: Implementing a Simple Prediction Pipline 
+
+### 1. Fitting two prediction models using different subsets of the features in the training data 
+
+Two models are created to predict the outcome variables `healthy_days`. The first model created, `model_1`, includes the following features:
+
+* sex
+* age_category
+* hispanic 
+* bmi 
+* tobacco
+* alcohol
+* physical_activity_category
+* diet_category
+* physical_activity_min
+* walk_avg_day
+
+We use the `trainControl` function to set validation method and options. We perform a 10-fold cross-validation for our analysis. The output is then applied to the `train` function. To minimise the RMSE, we apply a tuning grid for lambda and alpha. 
+
+```{r}
+control.settings = trainControl(method = "cv", number = 10)
+
+lambda = seq(0, 0.2, length = 20)
+lambda_grid = expand.grid(alpha = 1, lambda = lambda)
+
+set.seed(123)
+model_1 = 
+  train(healthy_days ~ sex + age_category + hispanic + bmi + tobacco + alcohol + physical_activity_category + diet_category + physical_activity_min + walk_avg_day, data = nyc_doh_train, method = "glmnet", preProc = c("center", "scale"), trControl = control.settings, tuneGrid = lambda_grid)
+
+model_1$bestTune
+```
+
+The second model created, `model_2`, includes the following features: 
+
+* sex
+* age_category
+* hispanic 
+* bmi 
+* country_origin
+* hypertension
+* diabetes
+* asthma
+
+The same approach is taken with `model_2` to generate the following output:
+
+```{r}
+control.settings = trainControl(method = "cv", number = 10)
+
+lambda = seq(0, 0.3, length = 20)
+lambda_grid = expand.grid(alpha = 1, lambda = lambda)
+
+set.seed(123)
+model_2 = 
+  train(healthy_days ~ sex + age_category + hispanic + bmi + country_origin + hypertension + diabetes + asthma, data = nyc_doh_train, method = "glmnet", preProc = c("center", "scale"), trControl = control.settings, tuneGrid = lambda_grid)
+
+model_2$bestTune
+```
 
 
+### 2. Applying both models within the test data 
 
+### 3. Implementation of final model 
+
+## Part II: Conducting an Unsupervised Analysis 
+
+### 4. Conducting a hierarchical clustering analysis 
+
+### 5. Research question using the newly identified clusters
 
 
 

@@ -401,12 +401,13 @@ in addition to base R</p>
 library(stats)
 library(factoextra)</code></pre>
 <pre><code>## Welcome! Want to learn more? See two factoextra-related books at https://goo.gl/ve3WBa</code></pre>
-<pre class="r"><code>library(cluster)</code></pre>
+<pre class="r"><code>library(cluster)
+library(ggpubr)</code></pre>
 </div>
-<div id="part-i" class="section level2">
-<h2>Part I</h2>
-<div id="step-1-load-and-prepare-dataset" class="section level3">
-<h3>Step 1: Load and Prepare Dataset</h3>
+<div id="part-0" class="section level2">
+<h2>Part 0</h2>
+<div id="load-and-prepare-dataset" class="section level3">
+<h3>Load and Prepare Dataset</h3>
 <p>The dataset is first imorted using the <code>read_csv</code>
 function, and is cleaned using the <code>clean_names</code> function.
 The dataset is then summarised using the <code>skim</code> function.</p>
@@ -789,6 +790,127 @@ dataset has 17 variables, 12 of which are factor variables
 and 5 of which are numeric variables (<code>id</code>, <code>bmi</code>,
 <code>physical_activity_min</code>, <code>walk_avg_day</code>,
 <code>healthy_days</code>).</p>
+</div>
+<div id="removing-highly-correlated-features-and-centering-and-scaling" class="section level3">
+<h3>Removing highly correlated features and centering and scaling</h3>
+<p>Prior to analysis, we want to remove highly correlated features to
+avoid introducing error. To do this, the numeric variables in our
+original dataset <code>nyc_doh_data</code> need to be selected and the
+<code>cor</code> function is applied to calculate correlations. Factor
+variables are omitted, since their correlations cannot be calculated. A
+cutoff point of 0.4 is used to identify highly correlated features using
+the function <code>findCorrelation</code>. The output is stored in the
+object <code>high_correlations</code>.</p>
+<pre class="r"><code>nyc_doh_numeric_data = 
+  nyc_doh_data %&gt;%
+  select(where(is.numeric))
+
+correlations = 
+  cor(nyc_doh_numeric_data,
+      use = &quot;complete.obs&quot;)
+
+high_correlations = findCorrelation(correlations, cutoff = 0.4)</code></pre>
+<p>The output indicates that there are no values in the
+<code>high_correlations</code> object, indicating that there are no
+highly correlated features that need to be removed. We can then proceed
+with the centering and scaling</p>
+<pre class="r"><code>set.up.preprocess = 
+  preProcess(nyc_doh_numeric_data, method = c(&quot;center&quot;, &quot;scale&quot;))
+
+transformed.vals = 
+  predict(set.up.preprocess, nyc_doh_numeric_data)</code></pre>
+</div>
+<div id="creating-balanced-partitions-in-the-data" class="section level3">
+<h3>Creating balanced partitions in the data</h3>
+<p>The data is then partitioned into training and testing using a 70/30
+split by using the function <code>createDataPartition</code>. The
+training and testing dataset is generated with an equal proportion of
+individual with the outcome of interest, in this case
+<code>healthy_days</code>.</p>
+<pre class="r"><code>train.index = 
+  createDataPartition(nyc_doh_data$healthy_days, p = 0.7, list = FALSE)
+
+nyc_doh_train = nyc_doh_data[train.index,]
+nyc_doh_test = nyc_doh_data[-train.index,]</code></pre>
+</div>
+</div>
+<div id="part-i-implementing-a-simple-prediction-pipline" class="section level2">
+<h2>Part I: Implementing a Simple Prediction Pipline</h2>
+<div id="fitting-two-prediction-models-using-different-subsets-of-the-features-in-the-training-data" class="section level3">
+<h3>1. Fitting two prediction models using different subsets of the
+features in the training data</h3>
+<p>Two models are created to predict the outcome variables
+<code>healthy_days</code>. The first model created,
+<code>model_1</code>, includes the following features:</p>
+<ul>
+<li>sex</li>
+<li>age_category</li>
+<li>hispanic</li>
+<li>bmi</li>
+<li>tobacco</li>
+<li>alcohol</li>
+<li>physical_activity_category</li>
+<li>diet_category</li>
+<li>physical_activity_min</li>
+<li>walk_avg_day</li>
+</ul>
+<p>We use the <code>trainControl</code> function to set validation
+method and options. We perform a 10-fold cross-validation for our
+analysis. The output is then applied to the <code>train</code> function.
+To minimise the RMSE, we apply a tuning grid for lambda and alpha.</p>
+<pre class="r"><code>control.settings = trainControl(method = &quot;cv&quot;, number = 10)
+
+lambda = seq(0, 0.2, length = 20)
+lambda_grid = expand.grid(alpha = 1, lambda = lambda)
+
+set.seed(123)
+model_1 = 
+  train(healthy_days ~ sex + age_category + hispanic + bmi + tobacco + alcohol + physical_activity_category + diet_category + physical_activity_min + walk_avg_day, data = nyc_doh_train, method = &quot;glmnet&quot;, preProc = c(&quot;center&quot;, &quot;scale&quot;), trControl = control.settings, tuneGrid = lambda_grid)
+
+model_1$bestTune</code></pre>
+<pre><code>##   alpha     lambda
+## 6     1 0.05263158</code></pre>
+<p>The second model created, <code>model_2</code>, includes the
+following features:</p>
+<ul>
+<li>sex</li>
+<li>age_category</li>
+<li>hispanic</li>
+<li>bmi</li>
+<li>country_origin</li>
+<li>hypertension</li>
+<li>diabetes</li>
+<li>asthma</li>
+</ul>
+<p>The same approach is taken with <code>model_2</code> to generate the
+following output:</p>
+<pre class="r"><code>control.settings = trainControl(method = &quot;cv&quot;, number = 10)
+
+lambda = seq(0, 0.3, length = 20)
+lambda_grid = expand.grid(alpha = 1, lambda = lambda)
+
+set.seed(123)
+model_2 = 
+  train(healthy_days ~ sex + age_category + hispanic + bmi + country_origin + hypertension + diabetes + asthma, data = nyc_doh_train, method = &quot;glmnet&quot;, preProc = c(&quot;center&quot;, &quot;scale&quot;), trControl = control.settings, tuneGrid = lambda_grid)
+
+model_2$bestTune</code></pre>
+<pre><code>##   alpha     lambda
+## 3     1 0.03157895</code></pre>
+</div>
+<div id="applying-both-models-within-the-test-data" class="section level3">
+<h3>2. Applying both models within the test data</h3>
+</div>
+<div id="implementation-of-final-model" class="section level3">
+<h3>3. Implementation of final model</h3>
+</div>
+</div>
+<div id="part-ii-conducting-an-unsupervised-analysis" class="section level2">
+<h2>Part II: Conducting an Unsupervised Analysis</h2>
+<div id="conducting-a-hierarchical-clustering-analysis" class="section level3">
+<h3>4. Conducting a hierarchical clustering analysis</h3>
+</div>
+<div id="research-question-using-the-newly-identified-clusters" class="section level3">
+<h3>5. Research question using the newly identified clusters</h3>
 </div>
 </div>
 
