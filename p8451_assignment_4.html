@@ -407,7 +407,7 @@ library(factoextra)</code></pre>
 library(ggpubr)
 
 set.seed(123)</code></pre>
-<p>The dataset is first imorted using the <code>read_csv</code>
+<p>The data set is first imorted using the <code>read_csv</code>
 function, and is cleaned using the <code>clean_names</code> function.
 The dataset is then summarised using the <code>skim</code> function.</p>
 <pre class="r"><code>nyc_doh_data = read_csv(file = &quot;data/class4_p1.csv&quot;) %&gt;%
@@ -1164,6 +1164,15 @@ fviz_gap_stat(gap_stat)</code></pre>
 </div>
 <div id="research-question-using-the-newly-identified-clusters" class="section level3">
 <h3>5. Research question using the newly identified clusters</h3>
+<p>One research question that can be addressed using the newly
+identified clusters is which states have higher rates of arrests per
+100,000 residentse for murder. The exposure in this research question
+are the clusters, while the outcome is the arrests per 100,000 residents
+for murder (<code>murder</code>). Before using these clusters for the
+proposed research question, it is imperative to analyse the ways in
+which data was obtained. If arrests are conducted in a biased manner
+(i.e. arrests conducted were racially biased), then the analysis would
+result in biased clustering, producing skewed results.</p>
 </div>
 </div>
 

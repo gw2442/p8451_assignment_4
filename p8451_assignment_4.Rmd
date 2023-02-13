@@ -26,7 +26,7 @@ library(ggpubr)
 set.seed(123)
 ```
 
-The dataset is first imorted using the `read_csv` function, and is cleaned using the `clean_names` function. The dataset is then summarised using the `skim` function. 
+The data set is first imorted using the `read_csv` function, and is cleaned using the `clean_names` function. The dataset is then summarised using the `skim` function. 
 
 ```{r}
 nyc_doh_data = read_csv(file = "data/class4_p1.csv") %>%
@@ -290,13 +290,7 @@ The following output indicates that the optimal number of clusters is 2.
 
 ### 5. Research question using the newly identified clusters
 
-
-
-
-
-
-
-
+One research question that can be addressed using the newly identified clusters is which states have higher rates of arrests per 100,000 residentse for murder. The exposure in this research question are the clusters, while the outcome is the arrests per 100,000 residents for murder (`murder`). Before using these clusters for the proposed research question, it is imperative to analyse the ways in which data was obtained. If arrests are conducted in a biased manner (i.e. arrests conducted were racially biased), then the analysis would result in biased clustering, producing skewed results. 
 
 
 
