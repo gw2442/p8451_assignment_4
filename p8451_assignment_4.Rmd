@@ -1,0 +1,122 @@
+---
+title: "P8451: Assignment 4"
+output: html_document
+date: "2023-02-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Step 0: Load packages 
+
+To proceed with the problem set, the following libraries will be used in addition to base R
+```{r}
+library(tidyverse)
+library(caret)
+library(Amelia)
+library(dplyr)
+library(stats)
+library(factoextra)
+library(cluster)
+```
+
+## Part I
+### Step 1: Load and Prepare Dataset 
+
+The dataset is first imorted using the `read_csv` function, and is cleaned using the `clean_names` function. The dataset is then summarised using the `skim` function. 
+
+```{r}
+nyc_doh_data = read_csv(file = "data/class4_p1.csv") %>%
+  janitor::clean_names()
+  skimr::skim(nyc_doh_data)
+```
+
+Based off of the codebook provided, the following variables are then renamed and recoded using the `mutate` function:
+
+* chronic1 = hypertension
+* chronic3 = diabetes
+* chronic4 = asthma
+* tobacco1 = tobacco
+* alcohol1 = alcohol
+* habits5 = physical_activity_category
+* habits7 = diet_category
+* agegroup = age_category
+* dem3 = sex
+* dem4 = hispanic
+* dem8 = country_origin
+* povertygroup = household_annual_income
+* x1 = id 
+* gpaq8totmin = physical_activity_min
+* gpaq11days = walk_avg_day
+
+
+While all variables are imported as numeric variables, the codebook indicates that the first 12 variables listed are factor variables and are therefore recoded according to the codebook. 
+
+All entries with NA are omitted using `na.omit`. Duplicate entries are omitted as well using the `distinct` function.
+
+```{r}
+nyc_doh_data =
+  nyc_doh_data %>%
+  mutate(
+    id = x1,
+    hypertension = factor(chronic1, labels = c("Yes","No")),
+    diabetes = factor(chronic3, labels = c("Yes","No")),
+    asthma = factor(chronic4, labels = c("Yes", "No")),
+    tobacco = factor(tobacco1, labels = c("Most or All Days",
+                                          "Some Days",
+                                          "Never")),
+    alcohol = factor(alcohol1, labels = c("Most or All Days",
+                                          "Some Days",
+                                          "Never")),
+    physical_activity_min = gpaq8totmin,
+    walk_avg_day = gpaq11days,
+    physical_activity_category = factor(habits5, labels = c("Very Active",
+                                                            "Somewhat Active",
+                                                            "Not Very Active",
+                                                            "Not Active At All")),
+    diet_category = factor(habits7, labels = c("Excellent",
+                                               "Very Good",
+                                               "Good",
+                                               "Fair",
+                                               "Poor")),
+    age_category = factor(agegroup, labels = c("18-24 Yrs", 
+                                               "25-44 Yrs",
+                                               "45-65 Yrs",
+                                               "65+ Yrs")),
+    sex = factor(dem3, labels = c("Male", "Female")),
+    hispanic = factor(dem4, labels = c("Yes", "No")),
+    country_origin = factor(dem8, labels = c("USA", "Outside USA")),
+    household_annual_income = factor(povertygroup, labels = c("<100%",
+                                                       "100-199%",
+                                                       "200-399%",
+                                                       "400-599%",
+                                                       "600%+",
+                                                       "Don't Know")),
+    healthy_days = healthydays
+  ) %>%
+  select(id, hypertension, diabetes, asthma, bmi, tobacco, alcohol, physical_activity_min, walk_avg_day, physical_activity_category, diet_category, age_category, sex, hispanic, country_origin, household_annual_income, healthy_days) %>%
+  na.omit() %>%
+  distinct(id, .keep_all = TRUE)
+```
+
+The dataset `nyc_doh_data` now has 2195 observations. The dataset has 17 variables, 12 of which are factor variables (`hypertension`, `diabetes`, `asthma`, `tobacco`, `alcohol`, `physical_activty_category`, `diet_category`, `age_category`, `sex`, `hispanic`, `country_of_origin`, `household_annual_income`) and 5 of which are numeric variables (`id`, `bmi`, `physical_activity_min`, `walk_avg_day`, `healthy_days`). 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
